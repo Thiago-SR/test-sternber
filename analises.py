@@ -40,7 +40,8 @@ def process_rt_means():
             required_columns = ['T0_rt', 'T1_rt', 'T2_rt']
             length_columns = ['T0_length', 'T1_length', 'T2_length']
             corr_columns = ['T0_corr', 'T1_corr', 'T2_corr']
-            missing_columns = [col for col in required_columns + length_columns + corr_columns if col not in df.columns]
+            targetfoil_columns = ['T0_targetfoil', 'T1_targetfoil', 'T2_targetfoil']
+            missing_columns = [col for col in required_columns + length_columns + corr_columns + targetfoil_columns if col not in df.columns]
             
             if missing_columns:
                 print(f"Aviso: Colunas ausentes no arquivo {file_name}: {missing_columns}")
@@ -153,6 +154,249 @@ def process_rt_means():
                 else:
                     print(f"    - Aviso: Nenhum valor válido encontrado para accuracy por length de {test_prefix}")
             
+            # Calcular slope do RT por length para T0, T1 e T2
+            slope_data = {}
+            for test_prefix in ['T0', 'T1', 'T2']:
+                rt_col = f'{test_prefix}_rt'
+                length_col = f'{test_prefix}_length'
+                corr_col = f'{test_prefix}_corr'
+                
+                if rt_col in df.columns and length_col in df.columns and corr_col in df.columns:
+                    # Criar DataFrame temporário com rt, length e corr válidos
+                    temp_slope_df = df[[rt_col, length_col, corr_col]].copy()
+                    temp_slope_df = temp_slope_df.dropna()
+                    
+                    if len(temp_slope_df) > 0:
+                        # Filtrar apenas respostas corretas (corr = 1)
+                        correct_trials = temp_slope_df[temp_slope_df[corr_col] == 1]
+                        
+                        if len(correct_trials) > 0:
+                            # Agrupar por length e calcular RT médio
+                            rt_by_length = correct_trials.groupby(length_col)[rt_col].mean().reset_index()
+                            
+                            if len(rt_by_length) > 1:  # Precisa de pelo menos 2 pontos para regressão
+                                # Calcular regressão linear: RT_médio = β₀ + β₁ · length
+                                # Usando numpy para calcular o slope
+                                x = rt_by_length[length_col].values
+                                y = rt_by_length[rt_col].values
+                                
+                                # Calcular slope usando numpy.polyfit (grau 1 = regressão linear)
+                                slope, intercept = np.polyfit(x, y, 1)
+                                
+                                slope_data[f'slope_rt_by_length_{test_prefix}'] = slope
+                                print(f"    - slope_rt_by_length_{test_prefix}: {slope:.3f} ms/item (n={len(rt_by_length)} pontos)")
+                            else:
+                                print(f"    - Aviso: Insuficientes pontos para calcular slope de {test_prefix} (apenas {len(rt_by_length)} ponto)")
+                                slope_data[f'slope_rt_by_length_{test_prefix}'] = np.nan
+                        else:
+                            print(f"    - Aviso: Nenhuma resposta correta encontrada para calcular slope de {test_prefix}")
+                            slope_data[f'slope_rt_by_length_{test_prefix}'] = np.nan
+                    else:
+                        print(f"    - Aviso: Nenhum valor válido encontrado para calcular slope de {test_prefix}")
+                        slope_data[f'slope_rt_by_length_{test_prefix}'] = np.nan
+                else:
+                    print(f"    - Aviso: Colunas {rt_col}, {length_col} ou {corr_col} não encontradas")
+                    slope_data[f'slope_rt_by_length_{test_prefix}'] = np.nan
+            
+            # Calcular RT médio por acerto por length para T0, T1 e T2
+            rt_correct_by_length_data = {}
+            for test_prefix in ['T0', 'T1', 'T2']:
+                rt_col = f'{test_prefix}_rt'
+                length_col = f'{test_prefix}_length'
+                corr_col = f'{test_prefix}_corr'
+                
+                if rt_col in df.columns and length_col in df.columns and corr_col in df.columns:
+                    # Criar DataFrame temporário com rt, length e corr válidos
+                    temp_rt_correct_df = df[[rt_col, length_col, corr_col]].copy()
+                    temp_rt_correct_df = temp_rt_correct_df.dropna()
+                    
+                    if len(temp_rt_correct_df) > 0:
+                        # Filtrar apenas respostas corretas (corr = 1)
+                        correct_trials = temp_rt_correct_df[temp_rt_correct_df[corr_col] == 1]
+                        
+                        if len(correct_trials) > 0:
+                            # Agrupar por length e calcular RT médio para respostas corretas
+                            rt_correct_by_length = correct_trials.groupby(length_col)[rt_col].mean()
+                            
+                            # Adicionar ao dicionário de resultados por length
+                            for length_val, mean_rt in rt_correct_by_length.items():
+                                key = f"mean_rt_correct_by_length_{test_prefix}_{int(length_val)}"
+                                rt_correct_by_length_data[key] = mean_rt
+                                print(f"    - {key}: {mean_rt:.3f} ms")
+                        else:
+                            print(f"    - Aviso: Nenhuma resposta correta encontrada para calcular RT por length de {test_prefix}")
+                            # Adicionar valores NaN para todos os lengths
+                            for length_val in [2, 4, 6]:
+                                key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                                rt_correct_by_length_data[key] = np.nan
+                    else:
+                        print(f"    - Aviso: Nenhum valor válido encontrado para calcular RT por length de {test_prefix}")
+                        # Adicionar valores NaN para todos os lengths
+                        for length_val in [2, 4, 6]:
+                            key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                            rt_correct_by_length_data[key] = np.nan
+                else:
+                    print(f"    - Aviso: Colunas {rt_col}, {length_col} ou {corr_col} não encontradas")
+                    # Adicionar valores NaN para todos os lengths
+                    for length_val in [2, 4, 6]:
+                        key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                        rt_correct_by_length_data[key] = np.nan
+            
+            # Calcular RT médio por erro por length para T0, T1 e T2
+            rt_incorrect_by_length_data = {}
+            for test_prefix in ['T0', 'T1', 'T2']:
+                rt_col = f'{test_prefix}_rt'
+                length_col = f'{test_prefix}_length'
+                corr_col = f'{test_prefix}_corr'
+                
+                if rt_col in df.columns and length_col in df.columns and corr_col in df.columns:
+                    # Criar DataFrame temporário com rt, length e corr válidos
+                    temp_rt_incorrect_df = df[[rt_col, length_col, corr_col]].copy()
+                    temp_rt_incorrect_df = temp_rt_incorrect_df.dropna()
+                    
+                    if len(temp_rt_incorrect_df) > 0:
+                        # Filtrar apenas respostas incorretas (corr = 0)
+                        incorrect_trials = temp_rt_incorrect_df[temp_rt_incorrect_df[corr_col] == 0]
+                        
+                        if len(incorrect_trials) > 0:
+                            # Agrupar por length e calcular RT médio para respostas incorretas
+                            rt_incorrect_by_length = incorrect_trials.groupby(length_col)[rt_col].mean()
+                            
+                            # Adicionar ao dicionário de resultados por length
+                            for length_val, mean_rt in rt_incorrect_by_length.items():
+                                key = f"mean_rt_incorrect_by_length_{test_prefix}_{int(length_val)}"
+                                rt_incorrect_by_length_data[key] = mean_rt
+                                print(f"    - {key}: {mean_rt:.3f} ms")
+                        else:
+                            print(f"    - Aviso: Nenhuma resposta incorreta encontrada para calcular RT por length de {test_prefix}")
+                            # Adicionar valores NaN para todos os lengths
+                            for length_val in [2, 4, 6]:
+                                key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                                rt_incorrect_by_length_data[key] = np.nan
+                    else:
+                        print(f"    - Aviso: Nenhum valor válido encontrado para calcular RT por length de {test_prefix}")
+                        # Adicionar valores NaN para todos os lengths
+                        for length_val in [2, 4, 6]:
+                            key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                            rt_incorrect_by_length_data[key] = np.nan
+                else:
+                    print(f"    - Aviso: Colunas {rt_col}, {length_col} ou {corr_col} não encontradas")
+                    # Adicionar valores NaN para todos os lengths
+                    for length_val in [2, 4, 6]:
+                        key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                        rt_incorrect_by_length_data[key] = np.nan
+            
+            # Calcular acurácia para alvos (T) e foils (F) por length para T0, T1 e T2
+            targetfoil_accuracy_by_length_data = {}
+            for test_prefix in ['T0', 'T1', 'T2']:
+                length_col = f'{test_prefix}_length'
+                targetfoil_col = f'{test_prefix}_targetfoil'
+                corr_col = f'{test_prefix}_corr'
+                
+                if length_col in df.columns and targetfoil_col in df.columns and corr_col in df.columns:
+                    # Criar DataFrame temporário com length, targetfoil e corr válidos
+                    temp_targetfoil_length_df = df[[length_col, targetfoil_col, corr_col]].copy()
+                    temp_targetfoil_length_df = temp_targetfoil_length_df.dropna()
+                    
+                    if len(temp_targetfoil_length_df) > 0:
+                        # Agrupar por length e targetfoil e calcular proporções de corr == 1
+                        for length_val in [2, 4, 6]:
+                            # Filtrar por length específico
+                            length_trials = temp_targetfoil_length_df[temp_targetfoil_length_df[length_col] == length_val]
+                            
+                            if len(length_trials) > 0:
+                                # Filtrar por target (T) e foil (F)
+                                target_trials = length_trials[length_trials[targetfoil_col] == 'T']
+                                foil_trials = length_trials[length_trials[targetfoil_col] == 'F']
+                                
+                                # Calcular accuracy para target trials deste length
+                                if len(target_trials) > 0:
+                                    target_accuracy = (target_trials[corr_col] == 1).sum() / len(target_trials)
+                                    key = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                                    targetfoil_accuracy_by_length_data[key] = target_accuracy
+                                    print(f"    - {key}: {target_accuracy:.3f} ({len(target_trials)} trials target)")
+                                else:
+                                    key = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                                    targetfoil_accuracy_by_length_data[key] = np.nan
+                                    print(f"    - {key}: NaN (sem trials target)")
+                                
+                                # Calcular accuracy para foil trials deste length
+                                if len(foil_trials) > 0:
+                                    foil_accuracy = (foil_trials[corr_col] == 1).sum() / len(foil_trials)
+                                    key = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                    targetfoil_accuracy_by_length_data[key] = foil_accuracy
+                                    print(f"    - {key}: {foil_accuracy:.3f} ({len(foil_trials)} trials foil)")
+                                else:
+                                    key = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                    targetfoil_accuracy_by_length_data[key] = np.nan
+                                    print(f"    - {key}: NaN (sem trials foil)")
+                            else:
+                                # Adicionar valores NaN para este length se não houver trials
+                                key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                                key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                targetfoil_accuracy_by_length_data[key_target] = np.nan
+                                targetfoil_accuracy_by_length_data[key_foil] = np.nan
+                                print(f"    - {key_target}: NaN (sem trials para length {length_val})")
+                                print(f"    - {key_foil}: NaN (sem trials para length {length_val})")
+                    else:
+                        print(f"    - Aviso: Nenhum valor válido encontrado para targetfoil accuracy por length de {test_prefix}")
+                        # Adicionar valores NaN para todos os lengths
+                        for length_val in [2, 4, 6]:
+                            key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                            key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                            targetfoil_accuracy_by_length_data[key_target] = np.nan
+                            targetfoil_accuracy_by_length_data[key_foil] = np.nan
+                else:
+                    print(f"    - Aviso: Colunas {length_col}, {targetfoil_col} ou {corr_col} não encontradas")
+                    # Adicionar valores NaN para todos os lengths
+                    for length_val in [2, 4, 6]:
+                        key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                        key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                        targetfoil_accuracy_by_length_data[key_target] = np.nan
+                        targetfoil_accuracy_by_length_data[key_foil] = np.nan
+            
+            # Calcular accuracy para target vs foil para T0, T1 e T2
+            targetfoil_accuracy_data = {}
+            for test_prefix in ['T0', 'T1', 'T2']:
+                targetfoil_col = f'{test_prefix}_targetfoil'
+                corr_col = f'{test_prefix}_corr'
+                
+                if targetfoil_col in df.columns and corr_col in df.columns:
+                    # Criar DataFrame temporário com targetfoil e corr válidos
+                    temp_targetfoil_df = df[[targetfoil_col, corr_col]].copy()
+                    temp_targetfoil_df = temp_targetfoil_df.dropna()
+                    
+                    if len(temp_targetfoil_df) > 0:
+                        # Filtrar por target (T) e foil (F)
+                        target_trials = temp_targetfoil_df[temp_targetfoil_df[targetfoil_col] == 'T']
+                        foil_trials = temp_targetfoil_df[temp_targetfoil_df[targetfoil_col] == 'F']
+                        
+                        # Calcular accuracy para target trials
+                        if len(target_trials) > 0:
+                            target_accuracy = (target_trials[corr_col] == 1).sum() / len(target_trials)
+                            targetfoil_accuracy_data[f'accuracy_target_{test_prefix}'] = target_accuracy
+                            print(f"    - accuracy_target_{test_prefix}: {target_accuracy:.3f} ({len(target_trials)} trials target)")
+                        else:
+                            print(f"    - Aviso: Nenhum trial target encontrado para {test_prefix}")
+                            targetfoil_accuracy_data[f'accuracy_target_{test_prefix}'] = np.nan
+                        
+                        # Calcular accuracy para foil trials
+                        if len(foil_trials) > 0:
+                            foil_accuracy = (foil_trials[corr_col] == 1).sum() / len(foil_trials)
+                            targetfoil_accuracy_data[f'accuracy_foil_{test_prefix}'] = foil_accuracy
+                            print(f"    - accuracy_foil_{test_prefix}: {foil_accuracy:.3f} ({len(foil_trials)} trials foil)")
+                        else:
+                            print(f"    - Aviso: Nenhum trial foil encontrado para {test_prefix}")
+                            targetfoil_accuracy_data[f'accuracy_foil_{test_prefix}'] = np.nan
+                    else:
+                        print(f"    - Aviso: Nenhum valor válido encontrado para targetfoil accuracy de {test_prefix}")
+                        targetfoil_accuracy_data[f'accuracy_target_{test_prefix}'] = np.nan
+                        targetfoil_accuracy_data[f'accuracy_foil_{test_prefix}'] = np.nan
+                else:
+                    print(f"    - Aviso: Colunas {targetfoil_col} ou {corr_col} não encontradas")
+                    targetfoil_accuracy_data[f'accuracy_target_{test_prefix}'] = np.nan
+                    targetfoil_accuracy_data[f'accuracy_foil_{test_prefix}'] = np.nan
+            
             # Adicionar resultados à lista - organizando por T0, T1, T2
             result_dict = {
                 'id': participant_id
@@ -175,6 +419,21 @@ def process_rt_means():
             for key, value in accuracy_by_length_data.items():
                 if 'T0' in key:
                     result_dict[key] = value
+            for key, value in slope_data.items():
+                if 'T0' in key:
+                    result_dict[key] = value
+            for key, value in rt_correct_by_length_data.items():
+                if 'T0' in key:
+                    result_dict[key] = value
+            for key, value in rt_incorrect_by_length_data.items():
+                if 'T0' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_data.items():
+                if 'T0' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_by_length_data.items():
+                if 'T0' in key:
+                    result_dict[key] = value
             
             # Adicionar dados T1
             result_dict['mean_rt_total_T1'] = valid_data['T1_rt']
@@ -193,6 +452,21 @@ def process_rt_means():
             for key, value in accuracy_by_length_data.items():
                 if 'T1' in key:
                     result_dict[key] = value
+            for key, value in slope_data.items():
+                if 'T1' in key:
+                    result_dict[key] = value
+            for key, value in rt_correct_by_length_data.items():
+                if 'T1' in key:
+                    result_dict[key] = value
+            for key, value in rt_incorrect_by_length_data.items():
+                if 'T1' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_data.items():
+                if 'T1' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_by_length_data.items():
+                if 'T1' in key:
+                    result_dict[key] = value
             
             # Adicionar dados T2
             result_dict['mean_rt_total_T2'] = valid_data['T2_rt']
@@ -209,6 +483,21 @@ def process_rt_means():
                 if 'T2' in key:
                     result_dict[key] = value
             for key, value in accuracy_by_length_data.items():
+                if 'T2' in key:
+                    result_dict[key] = value
+            for key, value in slope_data.items():
+                if 'T2' in key:
+                    result_dict[key] = value
+            for key, value in rt_correct_by_length_data.items():
+                if 'T2' in key:
+                    result_dict[key] = value
+            for key, value in rt_incorrect_by_length_data.items():
+                if 'T2' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_data.items():
+                if 'T2' in key:
+                    result_dict[key] = value
+            for key, value in targetfoil_accuracy_by_length_data.items():
                 if 'T2' in key:
                     result_dict[key] = value
             
