@@ -92,7 +92,7 @@ def process_rt_means():
                     
                     # Adicionar ao dicionário de resultados por length
                     for length_val, mean_rt in length_means.items():
-                        key = f"mean_rt_by_length_{test_prefix}_{int(length_val)}"
+                        key = f"mean_rt_by_length_{int(length_val)}_{test_prefix}"
                         length_data[key] = mean_rt
                         print(f"    - {key}: {mean_rt:.3f}")
                 else:
@@ -148,7 +148,7 @@ def process_rt_means():
                     
                     # Adicionar ao dicionário de resultados por length
                     for length_val, accuracy_val in length_accuracy.items():
-                        key = f"accuracy_by_length_{test_prefix}_{int(length_val)}"
+                        key = f"accuracy_by_length_{int(length_val)}_{test_prefix}"
                         accuracy_by_length_data[key] = accuracy_val
                         print(f"    - {key}: {accuracy_val:.3f}")
                 else:
@@ -220,26 +220,26 @@ def process_rt_means():
                             
                             # Adicionar ao dicionário de resultados por length
                             for length_val, mean_rt in rt_correct_by_length.items():
-                                key = f"mean_rt_correct_by_length_{test_prefix}_{int(length_val)}"
+                                key = f"mean_rt_correct_by_length_{int(length_val)}_{test_prefix}"
                                 rt_correct_by_length_data[key] = mean_rt
                                 print(f"    - {key}: {mean_rt:.3f} ms")
                         else:
                             print(f"    - Aviso: Nenhuma resposta correta encontrada para calcular RT por length de {test_prefix}")
                             # Adicionar valores NaN para todos os lengths
                             for length_val in [2, 4, 6]:
-                                key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                                key = f"mean_rt_correct_by_length_{length_val}_{test_prefix}"
                                 rt_correct_by_length_data[key] = np.nan
                     else:
                         print(f"    - Aviso: Nenhum valor válido encontrado para calcular RT por length de {test_prefix}")
                         # Adicionar valores NaN para todos os lengths
                         for length_val in [2, 4, 6]:
-                            key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                            key = f"mean_rt_correct_by_length_{length_val}_{test_prefix}"
                             rt_correct_by_length_data[key] = np.nan
                 else:
                     print(f"    - Aviso: Colunas {rt_col}, {length_col} ou {corr_col} não encontradas")
                     # Adicionar valores NaN para todos os lengths
                     for length_val in [2, 4, 6]:
-                        key = f"mean_rt_correct_by_length_{test_prefix}_{length_val}"
+                        key = f"mean_rt_correct_by_length_{length_val}_{test_prefix}"
                         rt_correct_by_length_data[key] = np.nan
             
             # Calcular RT médio por erro por length para T0, T1 e T2
@@ -264,26 +264,26 @@ def process_rt_means():
                             
                             # Adicionar ao dicionário de resultados por length
                             for length_val, mean_rt in rt_incorrect_by_length.items():
-                                key = f"mean_rt_incorrect_by_length_{test_prefix}_{int(length_val)}"
+                                key = f"mean_rt_incorrect_by_length_{int(length_val)}_{test_prefix}"
                                 rt_incorrect_by_length_data[key] = mean_rt
                                 print(f"    - {key}: {mean_rt:.3f} ms")
                         else:
                             print(f"    - Aviso: Nenhuma resposta incorreta encontrada para calcular RT por length de {test_prefix}")
                             # Adicionar valores NaN para todos os lengths
                             for length_val in [2, 4, 6]:
-                                key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                                key = f"mean_rt_incorrect_by_length_{length_val}_{test_prefix}"
                                 rt_incorrect_by_length_data[key] = np.nan
                     else:
                         print(f"    - Aviso: Nenhum valor válido encontrado para calcular RT por length de {test_prefix}")
                         # Adicionar valores NaN para todos os lengths
                         for length_val in [2, 4, 6]:
-                            key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                            key = f"mean_rt_incorrect_by_length_{length_val}_{test_prefix}"
                             rt_incorrect_by_length_data[key] = np.nan
                 else:
                     print(f"    - Aviso: Colunas {rt_col}, {length_col} ou {corr_col} não encontradas")
                     # Adicionar valores NaN para todos os lengths
                     for length_val in [2, 4, 6]:
-                        key = f"mean_rt_incorrect_by_length_{test_prefix}_{length_val}"
+                        key = f"mean_rt_incorrect_by_length_{length_val}_{test_prefix}"
                         rt_incorrect_by_length_data[key] = np.nan
             
             # Calcular acurácia para alvos (T) e foils (F) por length para T0, T1 e T2
@@ -312,28 +312,28 @@ def process_rt_means():
                                 # Calcular accuracy para target trials deste length
                                 if len(target_trials) > 0:
                                     target_accuracy = (target_trials[corr_col] == 1).sum() / len(target_trials)
-                                    key = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                                    key = f"accuracy_target_by_length_{int(length_val)}_{test_prefix}"
                                     targetfoil_accuracy_by_length_data[key] = target_accuracy
                                     print(f"    - {key}: {target_accuracy:.3f} ({len(target_trials)} trials target)")
                                 else:
-                                    key = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
+                                    key = f"accuracy_target_by_length_{int(length_val)}_{test_prefix}"
                                     targetfoil_accuracy_by_length_data[key] = np.nan
                                     print(f"    - {key}: NaN (sem trials target)")
                                 
                                 # Calcular accuracy para foil trials deste length
                                 if len(foil_trials) > 0:
                                     foil_accuracy = (foil_trials[corr_col] == 1).sum() / len(foil_trials)
-                                    key = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                    key = f"accuracy_foil_by_length_{int(length_val)}_{test_prefix}"
                                     targetfoil_accuracy_by_length_data[key] = foil_accuracy
                                     print(f"    - {key}: {foil_accuracy:.3f} ({len(foil_trials)} trials foil)")
                                 else:
-                                    key = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                    key = f"accuracy_foil_by_length_{int(length_val)}_{test_prefix}"
                                     targetfoil_accuracy_by_length_data[key] = np.nan
                                     print(f"    - {key}: NaN (sem trials foil)")
                             else:
                                 # Adicionar valores NaN para este length se não houver trials
-                                key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
-                                key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                                key_target = f"accuracy_target_by_length_{int(length_val)}_{test_prefix}"
+                                key_foil = f"accuracy_foil_by_length_{int(length_val)}_{test_prefix}"
                                 targetfoil_accuracy_by_length_data[key_target] = np.nan
                                 targetfoil_accuracy_by_length_data[key_foil] = np.nan
                                 print(f"    - {key_target}: NaN (sem trials para length {length_val})")
@@ -342,16 +342,16 @@ def process_rt_means():
                         print(f"    - Aviso: Nenhum valor válido encontrado para targetfoil accuracy por length de {test_prefix}")
                         # Adicionar valores NaN para todos os lengths
                         for length_val in [2, 4, 6]:
-                            key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
-                            key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                            key_target = f"accuracy_target_by_length_{int(length_val)}_{test_prefix}"
+                            key_foil = f"accuracy_foil_by_length_{int(length_val)}_{test_prefix}"
                             targetfoil_accuracy_by_length_data[key_target] = np.nan
                             targetfoil_accuracy_by_length_data[key_foil] = np.nan
                 else:
                     print(f"    - Aviso: Colunas {length_col}, {targetfoil_col} ou {corr_col} não encontradas")
                     # Adicionar valores NaN para todos os lengths
                     for length_val in [2, 4, 6]:
-                        key_target = f"accuracy_target_by_length_{test_prefix}_{int(length_val)}"
-                        key_foil = f"accuracy_foil_by_length_{test_prefix}_{int(length_val)}"
+                        key_target = f"accuracy_target_by_length_{int(length_val)}_{test_prefix}"
+                        key_foil = f"accuracy_foil_by_length_{int(length_val)}_{test_prefix}"
                         targetfoil_accuracy_by_length_data[key_target] = np.nan
                         targetfoil_accuracy_by_length_data[key_foil] = np.nan
             
