@@ -1,0 +1,43 @@
+
+
+# CSV dentro da pasta data
+data/*.csv
+
+# CSV dentro da pasta dados_sternberg_combinados
+dados_sternberg_combinados/*.csv
+
+# Arquivos de análises e resultados
+analises.csv
+resultados_anova_medidas_repetidas.xlsx
+graficos_todas_variaveis/*.png
+analise_completa_todas_variaveis.ods
+
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtualenv
+venv/
+.env/
+.venv/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+
+.vscode/
+*.code-workspace
+
+
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+desktop.ini
